@@ -2,40 +2,53 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace NugetUnbox
 {
     class Program
     {
+        public static readonly string inputKey = "-input";
+        public static readonly string outputKey = "-output";
+        public static readonly string regexKey = "-regex";
+
         static void Main(string[] args)
         {
-            string startFolder = @"C:\Users\Артём\Downloads\stamdart";
+            if (args.Length % 2 != 0) { Console.WriteLine("Args values is missing"); return; }
 
-            string[] packages = Directory.GetDirectories(startFolder);
+            Dictionary<string, string> config = ReadKeys(args);
 
-            List<string> libs = new List<string>();
-            foreach (string package in packages)
-            {
-                libs.AddRange(Directory.GetDirectories(package));
-            }
-            libs = libs.Where(str => str.EndsWith("lib")).ToList();
+            IEnumerable<string> filePaths = MatchFiles(config[inputKey], config[regexKey]);
 
-            List<string> dllPaths = new List<string>(libs.Count);
+            ExportFiles(filePaths, config[outputKey]);
 
-            foreach (string lib in libs)
-            {
-                string standartPath = Path.Combine(lib, "netstandard2.0");
-                dllPaths.AddRange(Directory.GetFiles(standartPath));
-            }
-            dllPaths = dllPaths.Where(dll => dll.EndsWith("dll")).ToList();
-
-            foreach (string dllPath in dllPaths)
-            {
-                File.Copy(dllPath, Path.Combine(dllPath, startFolder, Path.GetFileName(dllPath)));
-            }
-
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Hello World!, I'm done");
             Console.ReadLine();
         }
+        private static Dictionary<string, string> ReadKeys(string[] args)
+        {
+            Dictionary<string, string> config = new Dictionary<string, string>();
+            for (int i = 0; i < args.Length; i += 2)
+            {
+                config.Add(args[i], args[i + 1]);
+            }
+            return config;
+        }
+
+        private static IEnumerable<string> MatchFiles(string workingFolder, string pattern)
+        {
+            IEnumerable<string> filePaths = Directory.GetFiles(workingFolder, "*.*", SearchOption.AllDirectories);
+            return filePaths.Where(p => Regex.IsMatch(p, pattern));
+        }
+        private static void ExportFiles(IEnumerable<string> files, string outputPath)
+        {
+            Directory.CreateDirectory(outputPath);
+
+            foreach (string file in files)
+            {
+                File.Copy(file, Path.Combine(outputPath, Path.GetFileName(file)));
+            }
+        }
     }
+
 }
